@@ -12,6 +12,7 @@ from toponetx import TopoNetXError
 from toponetx.classes.cell import Cell
 from toponetx.classes.hyperedge import HyperEdge
 from toponetx.classes.simplex import Simplex
+from toponetx.classes.combination import Combination
 
 __all__ = ["HyperEdgeView", "CellView", "SimplexView", "NodeView"]
 
@@ -212,6 +213,8 @@ class HyperEdgeView:
             self.name = name
 
         self.hyperedge_dict = {}
+        self.max_dim = -1
+        self.faces_dict = []
 
     @staticmethod
     def _to_frozen_set(hyperedge):
@@ -239,9 +242,27 @@ class HyperEdgeView:
         TYPE : dict or list or dicts
             return dict of properties associated with that hyperedges
         """
-        hyperedge_ = HyperEdgeView._to_frozen_set(hyperedge)
-        rank = self.get_rank(hyperedge_)
-        return self.hyperedge_dict[rank][hyperedge_]
+
+        if isinstance(hyperedge, Combination):
+            if hyperedge.nodes in self.faces_dict[len(hyperedge) - 1]:
+                return self.faces_dict[len(hyperedge) - 1][hyperedge.nodes]
+        elif isinstance(hyperedge, Iterable):
+            hyperedge = frozenset(hyperedge)
+            if hyperedge in self.faces_dict[len(hyperedge) - 1]:
+                return self.faces_dict[len(hyperedge) - 1][hyperedge]
+            else:
+                raise KeyError(f"input {hyperedge} is not in the simplex dictionary")
+
+        elif isinstance(hyperedge, Hashable):
+
+            if frozenset({hyperedge}) in self:
+
+                return self.faces_dict[0][frozenset({hyperedge})]
+        else:
+            hyperedge_ = HyperEdgeView._to_frozen_set(hyperedge)
+            rank = self.get_rank(hyperedge_)
+            return self.hyperedge_dict[rank][hyperedge_]
+
 
     @property
     def shape(self):
