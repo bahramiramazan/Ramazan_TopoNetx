@@ -40,13 +40,13 @@ class HyperEdge:
             self.name = name
 
         if isinstance(elements, Hashable) and not isinstance(elements, Iterable):
-            elements = frozenset([elements])
+            elements = tuple([elements])
         if elements is not None:
             for i in elements:
                 if not isinstance(i, Hashable):
                     raise TypeError("Every element of HyperEdge must be hashable.")
 
-        self.nodes = frozenset(list(elements))
+        self.nodes = tuple(list(elements))
         self._rank = rank
 
         if len(self.nodes) != len(elements):

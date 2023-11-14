@@ -30,19 +30,19 @@ class Combination:
     """
 
     def __init__(self, elements, name=None, construct_tree=False, **attr):
-        print('Combination init')
+     
         if name is None:
             
             self.name = ""
         else:
             self.name = name
         self.construct_tree = construct_tree
-        self.nodes = frozenset(elements)
+        self.nodes = tuple(elements)
         if len(self.nodes) != len(elements):
             raise ValueError("A simplex cannot contain duplicate nodes.")
 
         else:
-            self._faces = frozenset()
+            self._faces = tuple()
         self.properties = dict()
         self.properties.update(attr)
 
@@ -54,12 +54,12 @@ class Combination:
             if len(e) > len(self.nodes):
                 return False
             else:
-                if isinstance(e, frozenset):
+                if isinstance(e, tuple):
                     return e <= self.nodes
                 else:
-                    return frozenset(e) <= self.nodes
+                    return tuple(e) <= self.nodes
         elif isinstance(e, Hashable):
-            return frozenset({e}) <= self.nodes
+            return tuple({e}) <= self.nodes
         else:
             return False
 

@@ -219,14 +219,14 @@ class HyperEdgeView:
     @staticmethod
     def _to_frozen_set(hyperedge):
         if isinstance(hyperedge, Iterable):
-            hyperedge_ = frozenset(hyperedge)
+            hyperedge_ = tuple(hyperedge)
 
         elif isinstance(hyperedge, HyperEdge):
             hyperedge_ = hyperedge.nodes
         elif isinstance(hyperedge, Hashable) and not isinstance(hyperedge, Iterable):
-            hyperedge_ = frozenset([hyperedge])
+            hyperedge_ = tuple([hyperedge])
         else:
-            hyperedge_ = frozenset(hyperedge)
+            hyperedge_ = tuple(hyperedge)
         return hyperedge_
 
     def __getitem__(self, hyperedge):
@@ -247,7 +247,7 @@ class HyperEdgeView:
             if hyperedge.nodes in self.faces_dict[len(hyperedge) - 1]:
                 return self.faces_dict[len(hyperedge) - 1][hyperedge.nodes]
         elif isinstance(hyperedge, Iterable):
-            hyperedge = frozenset(hyperedge)
+            hyperedge = tuple(hyperedge)
             if hyperedge in self.faces_dict[len(hyperedge) - 1]:
                 return self.faces_dict[len(hyperedge) - 1][hyperedge]
             else:
@@ -255,9 +255,9 @@ class HyperEdgeView:
 
         elif isinstance(hyperedge, Hashable):
 
-            if frozenset({hyperedge}) in self:
+            if tuple({hyperedge}) in self:
 
-                return self.faces_dict[0][frozenset({hyperedge})]
+                return self.faces_dict[0][tuple({hyperedge})]
         else:
             hyperedge_ = HyperEdgeView._to_frozen_set(hyperedge)
             rank = self.get_rank(hyperedge_)
@@ -298,7 +298,7 @@ class HyperEdgeView:
                 return False
             else:
                 for i in list(self.allranks):
-                    if frozenset(e) in self.hyperedge_dict[i]:
+                    if tuple(e) in self.hyperedge_dict[i]:
                         return True
                 return False
 
@@ -308,12 +308,12 @@ class HyperEdgeView:
             else:
                 for i in list(self.allranks):
 
-                    if frozenset(e.nodes) in self.hyperedge_dict[i]:
+                    if tuple(e.nodes) in self.hyperedge_dict[i]:
                         return True
                 return False
 
         elif isinstance(e, Hashable):
-            return frozenset({e}) in self.hyperedge_dict[0]
+            return tuple({e}) in self.hyperedge_dict[0]
 
         else:
 
@@ -369,7 +369,8 @@ class HyperEdgeView:
             elements = []
             if rank in self.allranks:
 
-                return sorted(list(self.hyperedge_dict[rank].keys()))
+                #return sorted(list(self.hyperedge_dict[rank].keys()))
+                return list(self.hyperedge_dict[rank].keys())
             else:
                 return []
 
@@ -379,14 +380,16 @@ class HyperEdgeView:
                 if rank >= rank:
 
                     elements = elements + list(self.hyperedge_dict[rank].keys())
-            return sorted(elements)
+            #return sorted(elements)
+            return elements
 
         elif level == "lower" or level == "down":
             elements = []
             for rank in self.allranks:
                 if rank <= rank:
                     elements = elements + list(self.hyperedge_dict[rank].keys())
-            return sorted(elements)
+            #return sorted(elements)
+            return elements
         else:
             raise TopoNetXError(
                 "level must be None, equal, 'upper', 'lower', 'up', or 'down' "
@@ -408,7 +411,7 @@ class HyperEdgeView:
                 return 0
             else:
                 for i in list(self.allranks):
-                    if frozenset(e) in self.hyperedge_dict[i]:
+                    if tuple(e) in self.hyperedge_dict[i]:
                         return i
                 raise KeyError(f"hyperedge {e} is not in the complex")
 
@@ -419,7 +422,7 @@ class HyperEdgeView:
             else:
                 for i in list(self.allranks):
 
-                    if frozenset(e.nodes) in self.hyperedge_dict[i]:
+                    if tuple(e.nodes) in self.hyperedge_dict[i]:
                         return i
                 raise KeyError(f"hyperedge {e} is not in the complex")
 
@@ -530,7 +533,7 @@ class SimplexView:
             if simplex.nodes in self.faces_dict[len(simplex) - 1]:
                 return self.faces_dict[len(simplex) - 1][simplex.nodes]
         elif isinstance(simplex, Iterable):
-            simplex = frozenset(simplex)
+            simplex = tuple(simplex)
             if simplex in self.faces_dict[len(simplex) - 1]:
                 return self.faces_dict[len(simplex) - 1][simplex]
             else:
@@ -538,9 +541,9 @@ class SimplexView:
 
         elif isinstance(simplex, Hashable):
 
-            if frozenset({simplex}) in self:
+            if tuple({simplex}) in self:
 
-                return self.faces_dict[0][frozenset({simplex})]
+                return self.faces_dict[0][tuple({simplex})]
 
     @property
     def shape(self):
@@ -592,7 +595,7 @@ class SimplexView:
             elif len(e) == 0:
                 return False
             else:
-                return frozenset(e) in self.faces_dict[len(e) - 1]
+                return tuple(e) in self.faces_dict[len(e) - 1]
 
         elif isinstance(e, Simplex):
             if len(e) - 1 > self.max_dim:
@@ -609,7 +612,7 @@ class SimplexView:
                 elif len(e) == 0:
                     return False
             else:
-                return frozenset({e}) in self.faces_dict[0]
+                return tuple({e}) in self.faces_dict[0]
         else:
             return False
 
@@ -676,7 +679,7 @@ class NodeView:
             if cell.nodes in self.nodes:
                 return self.nodes[cell.nodes]
         elif isinstance(cell, Iterable):
-            cell = frozenset(cell)
+            cell = tuple(cell)
             if cell in self.nodes:
                 return self.nodes[cell]
             else:
@@ -686,7 +689,7 @@ class NodeView:
 
             if cell in self:
 
-                return self.nodes[frozenset({cell})]
+                return self.nodes[tuple({cell})]
 
     def __len__(self):
         """Compute number of nodes."""
@@ -695,13 +698,13 @@ class NodeView:
     def __contains__(self, e):
         """Check if e is in the nodes."""
         if isinstance(e, Hashable) and not isinstance(e, self.cell_type):
-            return frozenset({e}) in self.nodes
+            return tuple({e}) in self.nodes
 
         elif isinstance(e, self.cell_type):
             return e.nodes in self.nodes
 
         elif isinstance(e, Iterable):
             if len(e) == 1:
-                return frozenset(e) in self.nodes
+                return tuple(e) in self.nodes
         else:
             return False

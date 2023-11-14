@@ -2,6 +2,7 @@
 
 import warnings
 from collections.abc import Hashable, Iterable
+from itertools import combinations
 
 import networkx as nx
 import numpy as np
@@ -87,7 +88,7 @@ class CombinatorialComplex(Complex):
     ):
         super().__init__()
 
-        print('test toponetx')
+       
 
         if not name:
             self.name = ""
@@ -143,7 +144,6 @@ class CombinatorialComplex(Complex):
                 for edge in cells.edges:
                     u, v = edge
                     self.add_cell([u, v], 1, **cells.get_edge_data(u, v))
-
     def _incidence_matrix_helper(self, children, uidset, sparse=True, index=False):
         """Help compute the incidence matrix."""
         from collections import OrderedDict
@@ -151,18 +151,19 @@ class CombinatorialComplex(Complex):
 
         ndict = dict(zip(children, range(len(children))))
         edict = dict(zip(uidset, range(len(uidset))))
+    
 
-        ndict = OrderedDict(sorted(ndict.items(), key=itemgetter(1)))
-        edict = OrderedDict(sorted(edict.items(), key=itemgetter(1)))
-
+        ndict = OrderedDict(ndict.items())
+        edict = OrderedDict(edict.items())
+   
         r_hyperedge_dict = {j: children[j] for j in range(len(children))}
         k_hyperedge_dict = {i: uidset[i] for i in range(len(uidset))}
-
+    
         r_hyperedge_dict = OrderedDict(
-            sorted(r_hyperedge_dict.items(), key=itemgetter(0))
+            r_hyperedge_dict.items()
         )
         k_hyperedge_dict = OrderedDict(
-            sorted(k_hyperedge_dict.items(), key=itemgetter(0))
+        k_hyperedge_dict.items()
         )
 
         if len(ndict) != 0:
@@ -178,7 +179,7 @@ class CombinatorialComplex(Complex):
                 data = list()
                 for n in ndict:
                     for e in edict:
-                        if n <= e:
+                        if frozenset(n) <= frozenset(e):
                             data.append(1)
                             rows.append(ndict[n])
                             cols.append(edict[e])
@@ -202,6 +203,7 @@ class CombinatorialComplex(Complex):
                 return {}, {}, np.zeros(1)
             else:
                 return np.zeros(1)
+
 
     def _incidence_matrix(
         self, rank, to_rank, incidence_type="up", weight=None, sparse=True, index=False
@@ -275,6 +277,7 @@ class CombinatorialComplex(Complex):
             ):  # up incidence is defined between two skeletons of different ranks
                 children = self.skeleton(to_rank)
                 uidset = self.skeleton(rank)
+            #print(children,'te',uidset)
         return self._incidence_matrix_helper(children, uidset, sparse, index)
 
     @property
@@ -369,13 +372,13 @@ class CombinatorialComplex(Complex):
                 if cell.nodes in self.nodes:
                     self.nodes.update(attr)
             elif isinstance(cell, Iterable):
-                cell = frozenset(cell)
+                cell = tuple(cell)
                 if cell in self.nodes:
                     self.nodes.update(attr)
                 else:
                     raise KeyError(f"node {cell} is not in complex")
             elif isinstance(cell, Hashable):
-                if frozenset({cell}) in self:
+                if tuple({cell}) in self:
                     self.nodes.update(attr)
                     return
         # we now check if the input is a cell in
@@ -663,7 +666,7 @@ class CombinatorialComplex(Complex):
         >>> d = {(1, 2): {'color': 'red', 'attr2': 1}, (0, 1): {'color': 'blue', 'attr2': 3} }
         >>> CC.set_cell_attributes(d)
         >>> cell_color = CC.get_cell_attributes('color')
-        >>> cell_color[frozenset({0, 1})]
+        >>> cell_color[tuple({0, 1})]
         'blue'
         """
         if rank is not None:
@@ -684,7 +687,7 @@ class CombinatorialComplex(Complex):
 
         Parameters
         ----------
-        hyperedge_ : frozenset of hashable elements
+        hyperedge_ : tuple of hashable elements
         rank : int
         attr : arbitrary attrs
 
@@ -700,7 +703,7 @@ class CombinatorialComplex(Complex):
                         self._complex_set.hyperedge_dict[0] = {}
 
                     if i not in self._complex_set.hyperedge_dict[0]:
-                        self._complex_set.hyperedge_dict[0][frozenset({i})] = {
+                        self._complex_set.hyperedge_dict[0][tuple({i})] = {
                             "weight": 1
                         }
             else:
@@ -711,7 +714,7 @@ class CombinatorialComplex(Complex):
                         self._complex_set.hyperedge_dict[0] = {}
 
                     if i not in self._complex_set.hyperedge_dict[0]:
-                        self._complex_set.hyperedge_dict[0][frozenset({i})] = {
+                        self._complex_set.hyperedge_dict[0][tuple({i})] = {
                             "weight": 1
                         }
         else:
@@ -723,7 +726,7 @@ class CombinatorialComplex(Complex):
                 if 0 not in self._complex_set.hyperedge_dict:
                     self._complex_set.hyperedge_dict[0] = {}
                 if i not in self._complex_set.hyperedge_dict[0]:
-                    self._complex_set.hyperedge_dict[0][frozenset({i})] = {"weight": 1}
+                    self._complex_set.hyperedge_dict[0][tuple({i})] = {"weight": 1}
 
     def _add_hyperedge(self, hyperedge, rank, **attr):
         """Add hyperedge.
@@ -756,6 +759,7 @@ class CombinatorialComplex(Complex):
         not add the hyperedge to hyperedge_dict. This is done to ensure that the HyperEdgeView
         instance only contains valid hyperedges.
         """
+        #print('763 hyperedge ',hyperedge)
         if not isinstance(rank, int):
             raise ValueError(f"rank must be an integer, got {rank}")
 
@@ -768,10 +772,10 @@ class CombinatorialComplex(Complex):
             else:
                 if 0 not in self._complex_set.hyperedge_dict:
                     self._complex_set.hyperedge_dict[0] = {}
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})] = {}
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})].update(attr)
-                self.add_combination(Combination(frozenset({hyperedge}), r=0))
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})][
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})] = {}
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})].update(attr)
+                self.add_combination(Combination(tuple({hyperedge}), r=0))
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})][
                     "weight"
                 ] = 1
                 return
@@ -782,17 +786,17 @@ class CombinatorialComplex(Complex):
             else:
                 if 0 not in self._complex_set.hyperedge_dict:
                     self._complex_set.hyperedge_dict[0] = {}
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})] = {}
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})].update(attr)
-                self.add_combination(Combination(frozenset({hyperedge}), r=0))
-                self._complex_set.hyperedge_dict[0][frozenset({hyperedge})][
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})] = {}
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})].update(attr)
+                self.add_combination(Combination(tuple({hyperedge}), r=0))
+                self._complex_set.hyperedge_dict[0][tuple({hyperedge})][
                     "weight"
                 ] = 1
                 return
         if isinstance(hyperedge, Iterable) or isinstance(hyperedge, HyperEdge):
             if not isinstance(hyperedge, HyperEdge):
-                hyperedge_ = frozenset(
-                    sorted(hyperedge)
+                hyperedge_ = tuple(
+                    hyperedge
                 )  # put the combination in cananical order
                 if len(hyperedge_) != len(hyperedge):
                     raise ValueError(
@@ -815,14 +819,15 @@ class CombinatorialComplex(Complex):
                 raise ValueError(
                     "rank must be positive for higher order hyperedges, got rank = 0 "
                 )
-
+        #print(hyperedge_,'is 823')
         self.add_combination(Combination(hyperedge_, r=rank))
+        
         if self.is_maximal(hyperedge_):  # safe to insert the hyperedge
             # looking down from hyperedge to other hyperedges in the complex
             # make sure all subsets of hyperedge have lower ranks
             all_subsets = self.get_sub_sets([hyperedge_], min_dim=1)
             for f in all_subsets:
-                if frozenset(f) == frozenset(hyperedge_):
+                if tuple(f) == tuple(hyperedge_):
                     continue
                 if "r" in self._complex_set[f]:  # f is part of the CC
                     if self._complex_set[f]["r"] > rank:
@@ -846,7 +851,7 @@ class CombinatorialComplex(Complex):
             # make sure all supersets that are in the complex of hyperedge have higher ranks
 
             for f in all_cofaces:
-                if frozenset(f) == frozenset(hyperedge_):
+                if tuple(f) == tuple(hyperedge_):
                     continue
                 if "r" in self._complex_set[f]:  # f is part of the CC
                     if self._complex_set[f]["r"] < rank:
@@ -882,7 +887,7 @@ class CombinatorialComplex(Complex):
         if isinstance(hyperedge, HyperEdge):
             hyperedge_ = hyperedge.nodes
         else:
-            hyperedge_ = frozenset(hyperedge)
+            hyperedge_ = tuple(hyperedge)
         rank = self._complex_set.get_rank(hyperedge_)
         del self._complex_set.hyperedge_dict[rank][hyperedge_]
 
@@ -913,6 +918,7 @@ class CombinatorialComplex(Complex):
         -------
         Combinatorial Complex : CombinatorialComplex
         """
+       
         if self.graph_based:
             if rank == 1:
                 if not isinstance(cell, Iterable):
@@ -1159,6 +1165,20 @@ class CombinatorialComplex(Complex):
 
             coadjacency_matrix : scipy.sparse.csr.csr_matrix
         """
+        # if via_rank is not None:
+        #     assert rank > via_rank
+        # if index:
+        #     B, row, col = self.incidence_matrix(
+        #         via_rank, rank, incidence_type="down", sparse=True, index=index
+        #     )
+        # else:
+        #     B = self.incidence_matrix(
+        #         rank, via_rank, incidence_type="down", sparse=True, index=index
+        #     )
+        # A = incidence_to_adjacency(B.T)
+        # if index:
+        #     return A, col
+        # return A
         if via_rank is not None:
             assert rank > via_rank
         if index:
@@ -1169,7 +1189,11 @@ class CombinatorialComplex(Complex):
             B = self.incidence_matrix(
                 rank, via_rank, incidence_type="down", sparse=True, index=index
             )
-        A = incidence_to_adjacency(B.T)
+        weight = False  # Currently weighting is not supported
+        if weight is False:
+            A = B.T.dot(B)
+            A.setdiag(0)
+            A = (A >= s) * 1
         if index:
             return A, col
         return A
@@ -1691,51 +1715,58 @@ class CombinatorialComplex(Complex):
         the input 'face' is a face of the input 'combination'.
         """
         k = len(face)
-        if frozenset(sorted(face)) not in self._complex_set.faces_dict[k - 1]:
+        #print(' tuple(face) not in self._complex_set.faces_dict[k - 1]')
+        #print( tuple(face) not in self._complex_set.faces_dict[k - 1])
+        if tuple(face) not in self._complex_set.faces_dict[k - 1]:
+            #print('tuple not',face)
             if len(face) == len(combination_):
 
-                self._complex_set.faces_dict[k - 1][frozenset(sorted(face))] = {
+                self._complex_set.faces_dict[k - 1][tuple(face)] = {
                     "is_maximal": True,
                     "membership": set(),
                 }
             else:
-                self._complex_set.faces_dict[k - 1][frozenset(sorted(face))] = {
+                self._complex_set.faces_dict[k - 1][tuple(face)] = {
                     "is_maximal": False,
                     "membership": set({combination_}),
                 }
         else:
             if len(face) != len(combination_):
-                if self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                #print('len(face) != len(combination_)',len(face) , len(combination_))
+                #print('face',face)
+                if self._complex_set.faces_dict[k - 1][tuple(face)][
                     "is_maximal"
                 ]:
 
-                    maximal_faces.add(frozenset(sorted(face)))
-                    self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                    maximal_faces.add(tuple(face))
+                    self._complex_set.faces_dict[k - 1][tuple(face)][
                         "is_maximal"
                     ] = False
-                    self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                    self._complex_set.faces_dict[k - 1][tuple(face)][
                         "membership"
                     ].add(combination_)
 
                 else:  # make sure all children of previous maximal simplices do
                     # not have that membership  anymore
-                    d = self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                    d = self._complex_set.faces_dict[k - 1][tuple(face)][
                         "membership"
                     ].copy()
                     for f in d:
                         if f in maximal_faces:
                             self._complex_set.faces_dict[k - 1][
-                                frozenset(sorted(face))
+                                tuple(face)
                             ]["membership"].remove(f)
-                    self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                    self._complex_set.faces_dict[k - 1][tuple(face)][
                         "is_maximal"
                     ] = False
-                    self._complex_set.faces_dict[k - 1][frozenset(sorted(face))][
+                    self._complex_set.faces_dict[k - 1][tuple(face)][
                         "membership"
                     ].add(combination_)
 
             else:
-                self._complex_set.faces_dict[k - 1][combination_].update(attr)
+                #print('face lst else',face)
+                #print('combination_',combination_)
+                self._complex_set.faces_dict[k - 1][tuple(face)].update(attr)
 
     def _insert_node(self, combination, **attr):
 
@@ -1747,7 +1778,7 @@ class CombinatorialComplex(Complex):
 
             if not isinstance(combination, Combination):
 
-                combination_ = frozenset(sorted((combination,)))
+                combination_ = tuple((combination))
 
             else:
                 combination_ = combination.nodes
@@ -1781,6 +1812,8 @@ class CombinatorialComplex(Complex):
 
     def _add_combination(self, combination, **attr):
 
+        #print(combination,'combination 1809')
+
         if isinstance(combination, Hashable) and not isinstance(combination, Iterable):
             combination = [combination]
         if isinstance(combination, str):
@@ -1793,8 +1826,8 @@ class CombinatorialComplex(Complex):
                     if not isinstance(x, Hashable):
                         raise TypeError("all element of combination must be hashable")
 
-                combination_ = frozenset(
-                    sorted(combination)
+                combination_ = tuple(
+                    combination
                 )  # put the combination in cananical order
                 if len(combination_) != len(combination):
                     raise ValueError("a combination cannot contain duplicate nodes")
@@ -1816,18 +1849,24 @@ class CombinatorialComplex(Complex):
             C=set(combination_)
             if len(self._complex_set)!=0:
                 for c in self._complex_set:
+                    c_=c
                     l=set(c)
                     if l.issubset(C) :
-                        face=l
+                        face=c_
+                        #print('face',face)
                         self._update_faces_dict_entry(face, combination_, maximal_faces, **attr)
 
-            self._update_faces_dict_entry(set(combination), combination_, maximal_faces, **attr)
+            self._update_faces_dict_entry(tuple(combination), combination_, maximal_faces, **attr)
             for c in self._complex_set:
+                        c_=c
                         l=set(c)
                         if C.issubset(l) :
-                            face=l
-                            self._update_faces_dict_entry(combination_ ,frozenset(face) , maximal_faces, **attr)
+                            face=c_
+                            #print(face,'face')
+                            self._update_faces_dict_entry(combination_ ,tuple(face) , maximal_faces, **attr)
             if isinstance(combination, Combination):
+                #print('self._complex_set.faces_dict')
+                #print(self._complex_set.faces_dict)
                 self._complex_set.faces_dict[len(combination_) - 1][combination_].update(
                     combination.properties
                 )
@@ -1839,8 +1878,8 @@ class CombinatorialComplex(Complex):
     def _remove_maximal_combination(self, combination):
         if isinstance(combination, Iterable):
             if not isinstance(combination, Combination):
-                combination_ = frozenset(
-                    sorted(combination)
+                combination_ = tuple(
+                    combination
                 )  # put the combination in cananical order
             else:
                 combination_ = combination.nodes
@@ -1882,6 +1921,7 @@ class CombinatorialComplex(Complex):
                 )
         else:
             raise KeyError("combination_s is not a part of the simplicial complex")
+        #print(self._complex_set.faces_dict)
 
     @staticmethod
     def get_boundaries(combination_s, min_dim=None, max_dim=None):
@@ -1910,16 +1950,16 @@ class CombinatorialComplex(Complex):
             for r in range(numnodes, 0, -1):
                 for face in combinations(combination, r):
                     if max_dim is None and min_dim is None:
-                        face_set.add(frozenset(sorted(face)))
+                        face_set.add(tuple(face))
                     elif max_dim is not None and min_dim is not None:
                         if len(face) <= max_dim + 1 and len(face) >= min_dim + 1:
-                            face_set.add(frozenset(sorted(face)))
+                            face_set.add(tuple(face))
                     elif max_dim is not None and min_dim is None:
                         if len(face) <= max_dim + 1:
-                            face_set.add(frozenset(sorted(face)))
+                            face_set.add(tuple(face))
                     elif max_dim is None and min_dim is not None:
                         if len(face) >= min_dim + 1:
-                            face_set.add(frozenset(sorted(face)))
+                            face_set.add(tuple(face))
 
         return face_set
 
@@ -1934,8 +1974,57 @@ class CombinatorialComplex(Complex):
         for w in self._complex_set:
             l=list(w)
             if l in s:
-                face_set.add(frozenset(sorted(l)))
-        return  set(frozenset(sorted(face_set)))
+                face_set.add(tuple(l))
+        return  set(tuple(face_set))
+
+
+
+    def _remove_maximal_simplex(self, simplex):
+        if isinstance(simplex, Iterable):
+            if not isinstance(simplex, Simplex):
+                simplex_ = tuple(
+                    simplex
+                )  # put the simplex in cananical order
+            else:
+                simplex_ = simplex.nodes
+        if simplex_ in self._complex_set.faces_dict[len(simplex_) - 1]:
+            if self.__getitem__(simplex)["is_maximal"]:
+                del self._complex_set.faces_dict[len(simplex_) - 1][simplex_]
+                faces = Combination(simplex_).faces
+                for s in faces:
+                    if len(s) == len(simplex_):
+                        continue
+                    else:
+                        s = s.nodes
+                        self._complex_set.faces_dict[len(s) - 1][s][
+                            "membership"
+                        ].remove(simplex_)
+                        if (
+                            len(
+                                self._complex_set.faces_dict[len(s) - 1][s][
+                                    "membership"
+                                ]
+                            )
+                            == 0
+                            and len(s) == len(simplex) - 1
+                        ):
+                            self._complex_set.faces_dict[len(s) - 1][s][
+                                "is_maximal"
+                            ] = True
+
+                if (
+                    len(self._complex_set.faces_dict[len(simplex_) - 1]) == 0
+                    and len(simplex_) - 1 == self._complex_set.max_dim
+                ):
+                    del self._complex_set.faces_dict[len(simplex_) - 1]
+                    self._complex_set.max_dim = len(self._complex_set.faces_dict) - 1
+
+            else:
+                raise ValueError(
+                    "Only maximal simplices can be deleted, input simplex is not maximal"
+                )
+        else:
+            raise KeyError("simplex is not a part of the simplicial complex")
 
     def remove_maximal_combination(self, combinationx):
         """Remove maximal combination from conbinatorial complex.
@@ -1975,13 +2064,13 @@ class CombinatorialComplex(Complex):
         -------
         list of tuples(combination).
         """
-        entire_tree = self.get_boundaries(
+        entire_tree = self.get_sub_sets(
             self.get_maximal_combinations_of_combination(conbinationx)
         )
         return [
             i
             for i in entire_tree
-            if frozenset(conbinationx).issubset(i) and len(i) - len(conbinationx) >= codimension
+            if tuple(conbinationx).issubset(i) and len(i) - len(conbinationx) >= codimension
         ]
 
     def is_maximal(self, conbinationx):
